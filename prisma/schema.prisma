@@ -40,25 +40,25 @@ enum TechnologyCategory {
 }
 
 model Paper {
-  id             String       @id @default(cuid())
-  slug           String       @unique
+  id             String      @id @default(cuid())
+  slug           String      @unique
   titleTh        String
   titleEn        String?
-  abstractTh     String       @db.Text
-  abstractEn     String?      @db.Text
+  abstractTh     String      @db.Text
+  abstractEn     String?     @db.Text
   academicYear   Int
   semester       Int?
   pdfUrl         String?
   pdfPageCount   Int?
   pdfSizeBytes   Int?
   coverImageUrl  String?
-  accessLevel    AccessLevel  @default(PUBLIC)
-  status         PaperStatus  @default(PUBLISHED)
-  viewCount      Int          @default(0)
-  downloadCount  Int          @default(0)
+  accessLevel    AccessLevel @default(PUBLIC)
+  status         PaperStatus @default(PUBLISHED)
+  viewCount      Int         @default(0)
+  downloadCount  Int         @default(0)
   researchAreaId String
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
   researchArea ResearchArea   @relation(fields: [researchAreaId], references: [id])
   authors      PaperAuthor[]
@@ -73,7 +73,7 @@ model Paper {
 }
 
 model Author {
-  id          String        @id @default(cuid())
+  id          String  @id @default(cuid())
   firstNameTh String
   lastNameTh  String
   firstNameEn String?
@@ -85,14 +85,14 @@ model Author {
 }
 
 model Advisor {
-  id          String         @id @default(cuid())
+  id          String  @id @default(cuid())
   titleName   String
   firstNameTh String
   lastNameTh  String
   firstNameEn String?
   lastNameEn  String?
   email       String?
-  isActive    Boolean        @default(true)
+  isActive    Boolean @default(true)
 
   papers PaperAdvisor[]
 }
@@ -109,10 +109,10 @@ model ResearchArea {
 }
 
 model Keyword {
-  id      String         @id @default(cuid())
-  nameTh  String
-  nameEn  String?
-  slug    String         @unique
+  id     String  @id @default(cuid())
+  nameTh String
+  nameEn String?
+  slug   String  @unique
 
   papers PaperKeyword[]
 }
@@ -178,8 +178,8 @@ model User {
   emailVerified DateTime?
   createdAt     DateTime  @default(now())
 
-  accounts Account[]
-  sessions Session[]
+  accounts  Account[]
+  sessions  Session[]
   downloads DownloadLog[]
 }
 

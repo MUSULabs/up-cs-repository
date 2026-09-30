@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# คลังภาคนิพนธ์ UP-CS
 
-## Getting Started
+คลังดิจิทัลสำหรับค้นหาและอ่านข้อมูลภาคนิพนธ์ของสาขาวิทยาการคอมพิวเตอร์ มหาวิทยาลัยพะเยา ช่วยให้นิสิตค้นหาหัวข้อเดิม อาจารย์ที่ปรึกษา และเทคโนโลยีที่ใช้ได้จากที่เดียว
 
-First, run the development server:
+## ภาพหน้าจอ
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+> **ภาพหน้าจอจะเพิ่มในภายหลัง**: หน้าแรก, หน้าค้นหา, หน้ารายละเอียด และหลังบ้านผู้ดูแล
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## ฟีเจอร์
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- ค้นหาและกรองภาคนิพนธ์ด้วยชื่อเรื่อง บทคัดย่อ ปี หมวดงาน อาจารย์ และเทคโนโลยี
+- รายละเอียดสองภาษา พร้อมผู้เขียน อาจารย์ คำสำคัญ และสถิติ
+- สิทธิ์ดาวน์โหลด 3 ระดับ: สาธารณะ, ผู้เข้าสู่ระบบ, สมาชิกภาควิชา
+- ผู้ดูแลจัดการภาคนิพนธ์ อนุกรมข้อมูล ผู้ใช้ และอัปโหลด PDF
+- ตรวจสอบ PDF ด้วย magic bytes, จำกัด 30 MB, นับจำนวนหน้า และบันทึกสถิติการดาวน์โหลด
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## เทคโนโลยี
 
-## Learn More
+Next.js 15 App Router, TypeScript, React Server Components, Tailwind CSS v4, shadcn/ui, PostgreSQL (Neon), Prisma, Auth.js v5, Zod, React Hook Form, pg_trgm/ILIKE และ pdf-lib
 
-To learn more about Next.js, take a look at the following resources:
+## เริ่มใช้งานในเครื่อง
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. ติดตั้ง Node.js รุ่น LTS และ PostgreSQL หรือสร้างฐานข้อมูลบน Neon
+2. ติดตั้งแพ็กเกจ: `npm install`
+3. คัดลอก `.env.example` เป็น `.env` แล้วกรอกค่า
+4. สร้างตารางและดัชนี: `npx prisma migrate dev`
+5. เพิ่มข้อมูลตัวอย่าง: `npm run db:seed`
+6. เริ่มเซิร์ฟเวอร์: `npm run dev`
+7. เปิด `http://localhost:3000`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+ไฟล์ PDF ในโหมด local จะถูกเก็บไว้ที่ `./uploads` และไม่ควร commit เข้า Git
 
-## Deploy on Vercel
+## ตัวแปรสภาพแวดล้อม
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| ตัวแปร | ใช้สำหรับ |
+|---|---|
+| `DATABASE_URL` | URL ฐานข้อมูล PostgreSQL |
+| `AUTH_SECRET` | secret สำหรับ Auth.js และ fallback salt |
+| `AUTH_GOOGLE_ID` | Google OAuth client ID |
+| `AUTH_GOOGLE_SECRET` | Google OAuth client secret |
+| `NEXTAUTH_URL` | URL หลักของระบบ |
+| `ADMIN_EMAIL` | อีเมลผู้ดูแลสำหรับ seed |
+| `ADMIN_PASSWORD` | รหัสผ่านผู้ดูแลสำหรับ seed |
+| `ALLOWED_EMAIL_DOMAIN` | โดเมนอีเมลที่อนุญาต เช่น `up.ac.th` |
+| `DOWNLOAD_IP_SALT` | salt แยกสำหรับแฮช IP ดาวน์โหลด |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## บัญชีตัวอย่างจาก seed
+
+ค่าจริงของผู้ดูแลอ่านจาก `ADMIN_EMAIL` และ `ADMIN_PASSWORD` ใน `.env` ส่วนบัญชีสาธิตคือ:
+
+| บัญชี | สิทธิ์ | รหัสผ่าน |
+|---|---|---|
+| `admin@example.com` | ADMIN | `Admin123!` |
+| `member@example.com` | DEPT_MEMBER | `Member123!` |
+| `viewer@example.com` | VIEWER | `Viewer123!` |
+
+ควรเปลี่ยนข้อมูลตัวอย่างก่อนใช้งานจริง
+
+## Roadmap
+
+สิ่งที่เลื่อนออกจากระยะปัจจุบัน ได้แก่ student self-submission, Google Scholar SEO, OAI-PMH, CSV bulk import และ cloud storage
