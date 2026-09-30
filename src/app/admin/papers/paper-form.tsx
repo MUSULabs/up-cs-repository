@@ -38,7 +38,6 @@ export function PaperForm({ action, paper, options }: Props) {
   return (
     <form action={submit} encType="multipart/form-data" className="space-y-8">
       <input type="hidden" name="id" value={value("id")} />
-      <input type="hidden" name="pdfUrl" value={value("pdfUrl")} />
       <input type="hidden" name="pdfPageCount" value={value("pdfPageCount")} />
       <input type="hidden" name="pdfSizeBytes" value={value("pdfSizeBytes")} />
       <section className="space-y-4 rounded-lg border bg-card p-5">
@@ -68,7 +67,7 @@ export function PaperForm({ action, paper, options }: Props) {
       <section className="space-y-4 rounded-lg border bg-card p-5">
         <h2 className="text-xl font-semibold">ไฟล์และสิทธิ์</h2>
         <label className="block space-y-1 text-sm"><span>ไฟล์ PDF (เฉพาะ PDF ไม่เกิน 30 MB)</span><Input name="pdfFile" type="file" accept="application/pdf,.pdf" /></label>
-        {value("pdfUrl") && <div className="flex items-center gap-3 text-sm text-muted-foreground"><span>มีไฟล์ PDF อยู่แล้ว ({value("pdfPageCount") || "-"} หน้า)</span><Button type="button" variant="destructive" size="sm" onClick={removePdf} disabled={pending}>ลบไฟล์</Button></div>}
+        {paper?.hasPdf === true && <div className="flex items-center gap-3 text-sm text-muted-foreground"><span>มีไฟล์ PDF อยู่แล้ว ({value("pdfPageCount") || "-"} หน้า)</span><Button type="button" variant="destructive" size="sm" onClick={removePdf} disabled={pending}>ลบไฟล์</Button></div>}
         <Field label="URL ภาพปก" name="coverImageUrl" defaultValue={value("coverImageUrl")} />
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="space-y-1 text-sm"><span>ระดับการเข้าถึง</span><select name="accessLevel" defaultValue={value("accessLevel") || "PUBLIC"} className="h-9 w-full rounded-md border bg-background px-3"><option value="PUBLIC">สาธารณะ</option><option value="AUTHENTICATED">ต้องเข้าสู่ระบบ</option><option value="DEPT_ONLY">เฉพาะภาควิชา</option></select></label>

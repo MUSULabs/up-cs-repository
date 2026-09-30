@@ -35,25 +35,28 @@ type PaperWithSensitiveAuthors = {
 
 export function sanitizePaper<T extends PaperWithSensitiveAuthors>(
   paper: T,
-): Omit<T, "authors"> & {
+): Omit<T, "authors" | "pdfUrl"> & {
+  hasPdf: boolean;
   authors?: Array<
     Omit<T["authors"] extends Array<infer A> ? A : never, "author"> & {
       author: Omit<SensitiveAuthor, "studentId" | "email">;
     }
   >;
 } {
-  const { authors, ...paperFields } = paper;
-  if (!authors) return paperFields as Omit<T, "authors">;
+  const { authors, pdfUrl, ...paperFields } = paper;
+  if (!authors) return { ...paperFields, hasPdf: Boolean(pdfUrl) } as Omit<T, "authors" | "pdfUrl"> & { hasPdf: boolean };
 
   return {
     ...paperFields,
+    hasPdf: Boolean(pdfUrl),
     authors: authors.map(({ author, ...join }) => {
       const publicAuthor = { ...author };
       delete publicAuthor.studentId;
       delete publicAuthor.email;
       return { ...join, author: publicAuthor };
     }),
-  } as Omit<T, "authors"> & {
+  } as Omit<T, "authors" | "pdfUrl"> & {
+    hasPdf: boolean;
     authors: Array<
       Omit<T["authors"] extends Array<infer A> ? A : never, "author"> & {
         author: Omit<SensitiveAuthor, "studentId" | "email">;

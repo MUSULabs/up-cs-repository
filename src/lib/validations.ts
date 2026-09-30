@@ -27,7 +27,7 @@ export const paperSchema = z.object({
   abstractEn: z.string().trim().optional(),
   academicYear: z.number().int().min(2400).max(3000),
   semester: z.number().int().min(1).max(3).optional(),
-  pdfUrl: z.url().optional(),
+  pdfUrl: z.string().trim().min(1).optional(),
   pdfPageCount: z.number().int().positive().optional(),
   pdfSizeBytes: z.number().int().positive().optional(),
   coverImageUrl: z.url().optional(),

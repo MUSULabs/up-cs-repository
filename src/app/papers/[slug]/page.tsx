@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { canDownload } from "@/lib/access";
+import { CitationDialog } from "./citation-dialog";
+import { PdfPreviewDialog } from "./pdf-preview-dialog";
 import { getPaperBySlug, getRelatedPapers, incrementViewCount } from "@/server/papers";
 
 type PaperPageProps = { params: Promise<{ slug: string }> };
@@ -84,7 +86,9 @@ export default async function PaperPage({ params }: PaperPageProps) {
             <Card className="sticky top-6">
               <CardContent className="space-y-4 p-5">
                 <h2 className="font-semibold">เอกสารฉบับเต็ม</h2>
-                {paper.pdfUrl && allowed ? <Button render={<a href={`/api/papers/${paper.slug}/download`} />} className="w-full"><Download className="size-4" />ดาวน์โหลด PDF</Button> : paper.accessLevel === "PUBLIC" ? <Button disabled className="w-full"><FileText className="size-4" />ยังไม่มีไฟล์ดาวน์โหลด</Button> : paper.accessLevel === "AUTHENTICATED" ? <Button render={<Link href="/login" />} className="w-full"><LockKeyhole className="size-4" />เข้าสู่ระบบเพื่อดาวน์โหลด</Button> : <><Button disabled className="w-full"><LockKeyhole className="size-4" />ดาวน์โหลด PDF</Button><p className="text-xs leading-5 text-muted-foreground">เอกสารนี้จำกัดสิทธิ์สำหรับสมาชิกภาควิชาวิทยาการคอมพิวเตอร์ เนื่องจากยังไม่ได้รับอนุญาตให้เผยแพร่</p></>}
+                <PdfPreviewDialog slug={paper.slug} allowed={allowed} hasPdf={paper.hasPdf} accessLevel={paper.accessLevel} />
+                {paper.hasPdf && allowed ? <Button render={<a href={`/api/papers/${paper.slug}/download`} />} className="w-full"><Download className="size-4" />ดาวน์โหลด PDF</Button> : paper.accessLevel === "PUBLIC" ? <Button disabled className="w-full"><FileText className="size-4" />ยังไม่มีไฟล์ดาวน์โหลด</Button> : paper.accessLevel === "AUTHENTICATED" ? <Button render={<Link href="/login" />} className="w-full"><LockKeyhole className="size-4" />เข้าสู่ระบบเพื่อดาวน์โหลด</Button> : <><Button disabled className="w-full"><LockKeyhole className="size-4" />ดาวน์โหลด PDF</Button><p className="text-xs leading-5 text-muted-foreground">เอกสารนี้จำกัดสิทธิ์สำหรับสมาชิกภาควิชาวิทยาการคอมพิวเตอร์ เนื่องจากยังไม่ได้รับอนุญาตให้เผยแพร่</p></>}
+                <CitationDialog paper={{ titleTh: paper.titleTh, titleEn: paper.titleEn, academicYear: paper.academicYear, authors: paper.authors?.map(({ author }) => ({ firstNameTh: String(author.firstNameTh), lastNameTh: String(author.lastNameTh) })) ?? [] }} />
                 {paper.pdfSizeBytes && <p className="text-xs text-muted-foreground">ขนาดไฟล์ {(paper.pdfSizeBytes / 1024 / 1024).toFixed(1)} MB</p>}
               </CardContent>
             </Card>

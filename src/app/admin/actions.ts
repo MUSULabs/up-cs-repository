@@ -54,7 +54,7 @@ export async function savePaper(formData: FormData) {
     abstractEn: emptyToUndefined(formData.get("abstractEn")),
     academicYear: Number(formData.get("academicYear")),
     semester: Number(formData.get("semester")) || undefined,
-    pdfUrl: emptyToUndefined(formData.get("pdfUrl")),
+    pdfUrl: undefined,
     pdfPageCount: Number(formData.get("pdfPageCount")) || undefined,
     pdfSizeBytes: Number(formData.get("pdfSizeBytes")) || undefined,
     coverImageUrl: emptyToUndefined(formData.get("coverImageUrl")),
@@ -68,20 +68,23 @@ export async function savePaper(formData: FormData) {
   };
   const parsed = adminPaperSchema.parse(raw);
   const id = emptyToUndefined(formData.get("id"));
+  const existingPaper = id
+    ? await prisma.paper.findUnique({ where: { id }, select: { pdfUrl: true } })
+    : null;
   const duplicate = await prisma.paper.findFirst({ where: { slug: parsed.slug, ...(id ? { id: { not: id } } : {}) }, select: { id: true } });
   if (duplicate) throw new Error("Slug นี้ถูกใช้งานแล้ว กรุณาเปลี่ยน Slug");
   const uploadedFile = formData.get("pdfFile");
-  let pdfKey = parsed.pdfUrl;
+  let pdfKey = existingPaper?.pdfUrl;
   let pdfPageCount = parsed.pdfPageCount;
   let pdfSizeBytes = parsed.pdfSizeBytes;
   if (uploadedFile instanceof File && uploadedFile.size > 0) {
     const pdf = await validatePdf(uploadedFile);
-    const uploaded = await storage.upload(uploadedFile);
+    const uploaded = await storage.upload(uploadedFile, uploadedFile.name);
     pdfKey = uploaded.key;
     pdfSizeBytes = uploaded.size;
     pdfPageCount = pdf.getPageCount();
-    if (id && parsed.pdfUrl) {
-      await storage.remove(parsed.pdfUrl).catch(() => undefined);
+    if (existingPaper?.pdfUrl) {
+      await storage.remove(existingPaper.pdfUrl).catch(() => undefined);
     }
   }
   const data = {

@@ -13,6 +13,8 @@ export default async function EditPaper({ params }: Props) {
       <h1 className="text-3xl font-bold">แก้ไขภาคนิพนธ์</h1>
       <PaperForm action={savePaper} paper={{
         ...paper,
+        hasPdf: Boolean(paper.pdfUrl),
+        pdfUrl: undefined,
         authorIds: paper.authors.map((x) => x.author.id),
         advisorIds: paper.advisors.map((x) => x.advisor.id),
         keywordIds: paper.keywords.map((x) => x.keyword.id),

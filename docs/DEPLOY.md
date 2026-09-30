@@ -12,6 +12,7 @@
 2. เพิ่ม environment variables ตาม `.env.example` ใน Production, Preview และ Development ตามต้องการ
 3. ตั้ง `NEXTAUTH_URL` เป็น URL จริงของ production และตั้ง `AUTH_SECRET` เป็นค่าสุ่มที่แข็งแรง
 4. ตั้ง `DOWNLOAD_IP_SALT` เป็นค่าสุ่มแยกจาก `AUTH_SECRET`
+5. ตั้ง `STORAGE_DRIVER=blob` และใส่ `BLOB_READ_WRITE_TOKEN` จาก Vercel Blob store
 
 ## 3. สร้างฐานข้อมูล
 
@@ -36,14 +37,22 @@ https://โดเมนของคุณ/api/auth/callback/google
 
 ## 5. ไฟล์ PDF ใน production
 
-ไดรเวอร์ local ที่เขียนลง `./uploads` ใช้ได้สำหรับ local development เท่านั้น เพราะ filesystem ของ Vercel เป็น ephemeral และไฟล์อาจหายเมื่อ instance เปลี่ยนหรือ redeploy
+ระบบใช้ Vercel Blob แบบ private ใน production โดยเก็บเฉพาะ pathname ภายใน Blob store ใน `Paper.pdfUrl` ไฟล์จะไม่ถูกส่ง URL ตรงให้ browser และทุกการดาวน์โหลดต้องผ่าน `/api/papers/[slug]/download` ซึ่งตรวจสิทธิ์ซ้ำก่อน stream ไฟล์
 
-ก่อนเปิดใช้งานจริงต้องเปลี่ยน `src/lib/storage.ts` ให้ใช้ object storage เช่น S3, Cloudflare R2 หรือ Supabase Storage โดย:
+ไดรเวอร์ local (`STORAGE_DRIVER=local`) ที่เขียนลง `./uploads` ใช้สำหรับ offline development เท่านั้น หากมีไฟล์เดิมใน `./uploads` และต้องการย้ายไป Blob:
 
-- เก็บเฉพาะ object key ใน `Paper.pdfUrl` ไม่เก็บไฟล์ในฐานข้อมูล
-- ใช้ private bucket และให้ download route เป็นผู้ตรวจสิทธิ์ก่อนอ่านไฟล์
-- เปลี่ยน `upload`, `download` และ `remove` ให้ใช้ SDK ของ provider
-- เก็บ credentials ใน Vercel environment variables เท่านั้น
-- พิจารณาใช้ signed URL อายุสั้นหลังตรวจสิทธิ์ หาก provider รองรับ
+```bash
+STORAGE_DRIVER=blob BLOB_READ_WRITE_TOKEN=... npm run storage:migrate
+```
+
+ถ้าใช้ PowerShell:
+
+```powershell
+$env:STORAGE_DRIVER="blob"
+$env:BLOB_READ_WRITE_TOKEN="..."
+npm run storage:migrate
+```
+
+`BLOB_READ_WRITE_TOKEN` ต้องอยู่ใน Vercel environment variables เท่านั้น ห้ามใส่ใน client bundle หรือ commit ลง repository
 
 ห้าม commit ไฟล์ PDF หรือ credentials ลง repository

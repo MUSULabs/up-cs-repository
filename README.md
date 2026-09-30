@@ -43,6 +43,8 @@ Next.js 15 App Router, TypeScript, React Server Components, Tailwind CSS v4, sha
 | `ADMIN_PASSWORD` | รหัสผ่านผู้ดูแลสำหรับ seed |
 | `ALLOWED_EMAIL_DOMAIN` | โดเมนอีเมลที่อนุญาต เช่น `up.ac.th` |
 | `DOWNLOAD_IP_SALT` | salt แยกสำหรับแฮช IP ดาวน์โหลด |
+| `STORAGE_DRIVER` | `local` สำหรับพัฒนา หรือ `blob` สำหรับ Vercel |
+| `BLOB_READ_WRITE_TOKEN` | token สำหรับ Vercel Blob แบบ private |
 
 ## บัญชีตัวอย่างจาก seed
 
