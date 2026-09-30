@@ -9,6 +9,11 @@ import { MobileFilters } from "./mobile-filters";
 import { SortSelect } from "./sort-select";
 import { searchPapers } from "@/server/papers";
 import { searchParamsSchema, type SearchParams } from "@/lib/validations";
+import { auth } from "@/../auth";
+import { getBookmarkedPaperIds } from "@/server/personalization";
+import { BookmarkButton } from "@/components/bookmark-button";
+import { CompareBar, CompareSelector } from "@/components/compare-selector";
+import { SaveSearchButton } from "@/components/save-search-button";
 
 type SearchPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -140,6 +145,9 @@ function FacetSection({ title, children }: { title: string; children: React.Reac
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const params = toSearchParams(await searchParams);
   const result = await searchPapers(params);
+  const session = await auth();
+  const bookmarkedIds = session?.user?.id ? await getBookmarkedPaperIds(session.user.id, result.items.map((item) => item.id)) : [];
+  const selectedIds = (first((await searchParams).compare) ?? "").split(",").filter(Boolean).slice(0, 3);
   const hasFilters = Boolean(params.q || params.year || params.areaSlug || params.advisorId || params.techSlug || params.accessLevel);
   const chips = [
     params.q && ["คำค้น", params.q, { q: undefined }],
@@ -169,6 +177,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         <MobileFilters><Facets params={params} result={result} /></MobileFilters>
         <p className="text-sm text-muted-foreground">พบ <span className="font-semibold text-foreground">{result.total}</span> ผลลัพธ์</p>
         <div className="ml-auto flex items-center gap-2">
+          {session?.user && <SaveSearchButton queryString={new URLSearchParams(Object.entries(params).map(([key, value]) => [key, String(value)])).toString()} />}
           <span className="hidden text-sm text-muted-foreground sm:inline">เรียงตาม</span>
           <SortSelect value={params.sort} hasQuery={Boolean(params.q)} />
         </div>
@@ -182,7 +191,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       <div className="grid gap-8 md:grid-cols-[16rem_1fr]">
         <aside className="hidden rounded-xl border bg-card p-4 md:block"><Facets params={params} result={result} /></aside>
         <section className="min-w-0">
-          {result.items.length === 0 ? <EmptyState /> : <div className="space-y-4">{result.items.map((paper) => <PaperCard key={paper.id} paper={paper} query={params.q} />)}</div>}
+          {result.items.length === 0 ? <EmptyState /> : <div className="space-y-4">{result.items.map((paper) => <PaperCard key={paper.id} paper={paper} query={params.q} bookmarked={bookmarkedIds.includes(paper.id)} selected={selectedIds.includes(paper.id)} authenticated={Boolean(session?.user)} />)}</div>}
+          <CompareBar ids={selectedIds} />
           <Pagination params={params} totalPages={result.totalPages} />
         </section>
       </div>
@@ -190,11 +200,12 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   );
 }
 
-function PaperCard({ paper, query }: { paper: Awaited<ReturnType<typeof searchPapers>>["items"][number]; query?: string }) {
+function PaperCard({ paper, query, bookmarked, selected, authenticated }: { paper: Awaited<ReturnType<typeof searchPapers>>["items"][number]; query?: string; bookmarked: boolean; selected: boolean; authenticated: boolean }) {
   return (
     <Card className="transition-shadow hover:shadow-md">
       <CardContent className="p-5 sm:p-6">
         <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+          <div className="flex items-center gap-3"><CompareSelector paperId={paper.id} selected={selected} />{authenticated ? <BookmarkButton paperId={paper.id} initialBookmarked={bookmarked} compact /> : null}</div>
           <div className="flex flex-wrap gap-2"><Badge variant="secondary">{paper.academicYear}</Badge><Badge variant="outline">{paper.researchArea.nameTh}</Badge></div>
           {paper.accessLevel !== "PUBLIC" && <span title="เอกสารนี้มีข้อจำกัดในการดาวน์โหลด" className="inline-flex items-center gap-1 text-xs text-muted-foreground"><LockKeyhole className="size-4" />จำกัดการเข้าถึง</span>}
         </div>

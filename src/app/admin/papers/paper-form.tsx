@@ -79,7 +79,7 @@ export function PaperForm({ action, paper, options }: Props) {
   );
 }
 
-function Field(props: React.ComponentProps<typeof Input> & { label: string }) {
+export function Field(props: React.ComponentProps<typeof Input> & { label: string }) {
   const { label, ...input } = props;
   return <label className="block space-y-1 text-sm"><span>{label}</span><Input {...input} /></label>;
 }

@@ -12,6 +12,9 @@ import { canDownload } from "@/lib/access";
 import { CitationDialog } from "./citation-dialog";
 import { PdfPreviewDialog } from "./pdf-preview-dialog";
 import { getPaperBySlug, getRelatedPapers, incrementViewCount } from "@/server/papers";
+import { getBookmarkedPaperIds } from "@/server/personalization";
+import { BookmarkButton } from "@/components/bookmark-button";
+import { absoluteUrl } from "@/lib/site";
 
 type PaperPageProps = { params: Promise<{ slug: string }> };
 
@@ -19,15 +22,43 @@ export async function generateMetadata({ params }: PaperPageProps): Promise<Meta
   const { slug } = await params;
   const paper = await getPaperBySlug(slug);
   if (!paper) return { title: "ไม่พบภาคนิพนธ์" };
-  return {
+  const isPublic = paper.accessLevel === "PUBLIC";
+  const authors = paper.authors?.map(({ author }) => `${author.firstNameTh} ${author.lastNameTh}`) ?? [];
+  const canonical = absoluteUrl(`/papers/${paper.slug}`);
+  const metadata: Metadata = {
     title: `${paper.titleTh} | คลังภาคนิพนธ์ ม.พะเยา`,
     description: paper.abstractTh.slice(0, 160),
+    alternates: { canonical },
     openGraph: {
       title: paper.titleTh,
       description: paper.abstractTh.slice(0, 160),
       type: "article",
+      url: canonical,
+      ...(isPublic ? { images: [{ url: absoluteUrl(`/papers/${paper.slug}/opengraph-image`) }] } : {}),
     },
   };
+  if (isPublic) {
+    const publicationYear = String(paper.academicYear - 543);
+    metadata.other = {
+      citation_title: paper.titleEn || paper.titleTh,
+      citation_author: authors,
+      citation_publication_date: `${publicationYear}-01-01`,
+      citation_dissertation_institution: "University of Phayao",
+      citation_abstract_html_url: canonical,
+      ...(paper.hasPdf ? { citation_pdf_url: absoluteUrl(`/api/papers/${paper.slug}/download`) } : {}),
+      citation_keywords: paper.keywords.map(({ keyword }) => keyword.nameEn || keyword.nameTh).join(", "),
+      citation_language: "th",
+      "DC.title": paper.titleTh,
+      "DC.creator": authors,
+      "DC.date": `${publicationYear}-01-01`,
+      "DC.description": paper.abstractTh,
+      "DC.subject": paper.keywords.map(({ keyword }) => keyword.nameEn || keyword.nameTh).join(", "),
+      "DC.language": "th",
+      "DC.type": "Text",
+      "DC.institution": "มหาวิทยาลัยพะเยา",
+    };
+  }
+  return metadata;
 }
 
 export default async function PaperPage({ params }: PaperPageProps) {
@@ -39,9 +70,29 @@ export default async function PaperPage({ params }: PaperPageProps) {
   const related = await getRelatedPapers(paper.id);
   const session = await auth();
   const allowed = canDownload(paper, session);
+  const bookmarked = session?.user?.id ? (await getBookmarkedPaperIds(session.user.id, [paper.id])).includes(paper.id) : false;
+  const isPublic = paper.accessLevel === "PUBLIC";
+  const structuredData = isPublic ? {
+    "@context": "https://schema.org",
+    "@type": "ScholarlyArticle",
+    name: paper.titleTh,
+    ...(paper.titleEn ? { alternateName: paper.titleEn } : {}),
+    headline: paper.titleTh,
+    abstract: paper.abstractTh,
+    url: absoluteUrl(`/papers/${paper.slug}`),
+    datePublished: `${paper.academicYear - 543}-01-01`,
+    inLanguage: "th",
+    isAccessibleForFree: true,
+    ...(paper.hasPdf ? { associatedMedia: { "@type": "MediaObject", contentUrl: absoluteUrl(`/api/papers/${paper.slug}/download`), encodingFormat: "application/pdf" } } : {}),
+    author: paper.authors?.map(({ author }) => ({ "@type": "Person", name: `${author.firstNameTh} ${author.lastNameTh}` })) ?? [],
+    keywords: paper.keywords.map(({ keyword }) => keyword.nameEn || keyword.nameTh).join(", "),
+    publisher: { "@type": "Organization", name: "มหาวิทยาลัยพะเยา" },
+    ...(paper.advisors[0] ? { contributor: { "@type": "Person", name: `${paper.advisors[0].advisor.titleName}${paper.advisors[0].advisor.firstNameTh} ${paper.advisors[0].advisor.lastNameTh}` } } : {}),
+  } : null;
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+      {structuredData && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />}
       <nav className="mb-8 text-sm text-muted-foreground">
         <Link href="/" className="hover:text-primary">หน้าแรก</Link><span className="mx-2">/</span>
         <Link href="/search" className="hover:text-primary">ค้นหาภาคนิพนธ์</Link><span className="mx-2">/</span>
@@ -86,6 +137,7 @@ export default async function PaperPage({ params }: PaperPageProps) {
             <Card className="sticky top-6">
               <CardContent className="space-y-4 p-5">
                 <h2 className="font-semibold">เอกสารฉบับเต็ม</h2>
+                {session?.user && <BookmarkButton paperId={paper.id} initialBookmarked={bookmarked} />}
                 <PdfPreviewDialog slug={paper.slug} allowed={allowed} hasPdf={paper.hasPdf} accessLevel={paper.accessLevel} />
                 {paper.hasPdf && allowed ? <Button render={<a href={`/api/papers/${paper.slug}/download`} />} className="w-full"><Download className="size-4" />ดาวน์โหลด PDF</Button> : paper.accessLevel === "PUBLIC" ? <Button disabled className="w-full"><FileText className="size-4" />ยังไม่มีไฟล์ดาวน์โหลด</Button> : paper.accessLevel === "AUTHENTICATED" ? <Button render={<Link href="/login" />} className="w-full"><LockKeyhole className="size-4" />เข้าสู่ระบบเพื่อดาวน์โหลด</Button> : <><Button disabled className="w-full"><LockKeyhole className="size-4" />ดาวน์โหลด PDF</Button><p className="text-xs leading-5 text-muted-foreground">เอกสารนี้จำกัดสิทธิ์สำหรับสมาชิกภาควิชาวิทยาการคอมพิวเตอร์ เนื่องจากยังไม่ได้รับอนุญาตให้เผยแพร่</p></>}
                 <CitationDialog paper={{ titleTh: paper.titleTh, titleEn: paper.titleEn, academicYear: paper.academicYear, authors: paper.authors?.map(({ author }) => ({ firstNameTh: String(author.firstNameTh), lastNameTh: String(author.lastNameTh) })) ?? [] }} />
@@ -95,7 +147,7 @@ export default async function PaperPage({ params }: PaperPageProps) {
           </aside>
         </div>
       </article>
-      {related.length > 0 && <section className="mt-16 border-t pt-10"><h2 className="mb-5 text-2xl font-bold">งานวิจัยที่เกี่ยวข้อง</h2><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{related.map((item) => <Link key={item.id} href={`/papers/${item.slug}`}><Card className="h-full transition-shadow hover:shadow-md"><CardContent className="p-4"><Badge variant="secondary">{item.academicYear}</Badge><h3 className="mt-3 line-clamp-3 font-semibold">{item.titleTh}</h3></CardContent></Card></Link>)}</div></section>}
+      {related.length > 0 && <section className="mt-16 border-t pt-10"><h2 className="mb-5 text-2xl font-bold">งานวิจัยที่เกี่ยวข้อง</h2><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{related.map(({ paper: item, match }) => <Link key={item.id} href={`/papers/${item.slug}`}><Card className="h-full transition-shadow hover:shadow-md"><CardContent className="p-4"><Badge variant="secondary">{item.academicYear}</Badge><h3 className="mt-3 line-clamp-3 font-semibold">{item.titleTh}</h3><p className="mt-2 text-xs text-muted-foreground">ความคล้าย {match.score}% · {match.matchedTerms.slice(0, 2).join(", ") || "หัวข้อใกล้เคียง"}</p></CardContent></Card></Link>)}</div></section>}
     </main>
   );
 }

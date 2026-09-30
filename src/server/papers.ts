@@ -2,6 +2,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { sanitizePaper } from "@/lib/access";
 import { searchParamsSchema, type SearchParams } from "@/lib/validations";
+import { scoreSimilarity, tokenize } from "@/lib/similarity";
 
 const paperListSelect = {
   id: true,
@@ -171,15 +172,65 @@ export async function getPaperBySlug(slug: string) {
 }
 
 export async function getRelatedPapers(paperId: string) {
-  const paper = await prisma.paper.findUnique({ where: { id: paperId }, select: { researchAreaId: true } });
-  if (!paper) return [];
-  const records = await prisma.paper.findMany({
-    where: { researchAreaId: paper.researchAreaId, id: { not: paperId }, status: "PUBLISHED" },
-    orderBy: { createdAt: "desc" },
-    take: 4,
-    select: paperListSelect,
+  const paper = await prisma.paper.findUnique({
+    where: { id: paperId },
+    select: { titleTh: true, keywords: { select: { keyword: { select: { nameTh: true } } } }, technologies: { select: { technology: { select: { name: true } } } } },
   });
-  return records.map(sanitizePaper);
+  if (!paper) return [];
+  const candidates = await prisma.paper.findMany({
+    where: { id: { not: paperId }, status: "PUBLISHED" },
+    select: { ...paperListSelect, keywords: { select: { keyword: { select: { nameTh: true } } } }, technologies: { select: { technology: { select: { name: true } } } } },
+  });
+  const titleScores = await prisma.$queryRaw<Array<{ id: string; score: number }>>(
+    Prisma.sql`SELECT "id", similarity("titleTh", ${paper.titleTh})::float4 AS score FROM "Paper" WHERE "status" = 'PUBLISHED' AND "id" <> ${paperId}`,
+  );
+  const titleById = new Map(titleScores.map((item) => [item.id, item.score]));
+  return candidates
+    .map((record) => ({
+      paper: sanitizePaper(record),
+      match: scoreSimilarity({
+        titleSimilarity: titleById.get(record.id) ?? 0,
+        proposedTerms: [paper.titleTh, ...paper.keywords.map(({ keyword }) => keyword.nameTh)],
+        paperTitle: record.titleTh,
+        paperKeywords: record.keywords.map(({ keyword }) => keyword.nameTh),
+        proposedTechnologies: paper.technologies.map(({ technology }) => technology.name),
+        paperTechnologies: record.technologies.map(({ technology }) => technology.name),
+      }),
+    }))
+    .sort((a, b) => b.match.score - a.match.score)
+    .slice(0, 4);
+}
+
+export async function checkTopicSimilarity(title: string, description = "") {
+  const query = `${title} ${description}`.trim();
+  const [records, titleScores] = await Promise.all([
+    prisma.paper.findMany({
+      where: { status: "PUBLISHED" },
+      select: {
+        ...paperListSelect,
+        keywords: { select: { keyword: { select: { nameTh: true } } } },
+        technologies: { select: { technology: { select: { name: true } } } },
+      },
+    }),
+    prisma.$queryRaw<Array<{ id: string; score: number }>>(
+      Prisma.sql`SELECT "id", similarity("titleTh", ${query})::float4 AS score FROM "Paper" WHERE "status" = 'PUBLISHED'`,
+    ),
+  ]);
+  const titleById = new Map(titleScores.map((item) => [item.id, item.score]));
+  return records
+    .map((record) => {
+      const match = scoreSimilarity({
+        titleSimilarity: titleById.get(record.id) ?? 0,
+        proposedTerms: tokenize(query),
+        paperTitle: record.titleTh,
+        paperKeywords: record.keywords.map(({ keyword }) => keyword.nameTh),
+        proposedTechnologies: tokenize(query),
+        paperTechnologies: record.technologies.map(({ technology }) => technology.name),
+      });
+      return { paper: sanitizePaper(record), match };
+    })
+    .sort((a, b) => b.match.score - a.match.score)
+    .slice(0, 10);
 }
 
 export async function getHomeStats() {

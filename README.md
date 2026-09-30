@@ -13,10 +13,17 @@
 - สิทธิ์ดาวน์โหลด 3 ระดับ: สาธารณะ, ผู้เข้าสู่ระบบ, สมาชิกภาควิชา
 - ผู้ดูแลจัดการภาคนิพนธ์ อนุกรมข้อมูล ผู้ใช้ และอัปโหลด PDF
 - ตรวจสอบ PDF ด้วย magic bytes, จำกัด 30 MB, นับจำนวนหน้า และบันทึกสถิติการดาวน์โหลด
+- ตรวจสอบหัวข้อซ้ำ (similarity scoring) ช่วยนิสิตตัดสินใจหัวข้อ
+- อ้างอิงงานวิจัย: APA 7 / IEEE / BibTeX / RIS พร้อมคัดลอกและดาวน์โหลด
+- บันทึกรายการโปรด, บันทึกการค้นหา, เปรียบเทียบภาคนิพนธ์ (ต้องเข้าสู่ระบบ)
+- แดชบอร์ดสถิติผู้ดูแล (recharts) และหน้าสถิติสาธารณะ `/stats`
+- นำเข้า/ส่งออกข้อมูลจำนวนมาก (CSV/XLSX)
+- SEO: sitemap, robots, JSON-LD, Highwire Press, Dublin Core, OG image
+- PDPA: ไม่เปิด studentId/อีเมล, แฮช IP, หน้า `/privacy`
 
 ## เทคโนโลยี
 
-Next.js 15 App Router, TypeScript, React Server Components, Tailwind CSS v4, shadcn/ui, PostgreSQL (Neon), Prisma, Auth.js v5, Zod, React Hook Form, pg_trgm/ILIKE และ pdf-lib
+Next.js 15 App Router, TypeScript, React Server Components, Tailwind CSS v4, shadcn/ui, PostgreSQL (Neon), Prisma, Auth.js v5, Zod, React Hook Form, pg_trgm/ILIKE, pdf-lib, recharts, xlsx, react-pdf
 
 ## เริ่มใช้งานในเครื่อง
 
@@ -61,3 +68,16 @@ Next.js 15 App Router, TypeScript, React Server Components, Tailwind CSS v4, sha
 ## Roadmap
 
 สิ่งที่เลื่อนออกจากระยะปัจจุบัน ได้แก่ student self-submission, Google Scholar SEO, OAI-PMH, CSV bulk import และ cloud storage
+
+## เอกสารอ้างอิง (docs/)
+
+- [PROPOSAL.md](docs/PROPOSAL.md) — ใบเสนอโครงการหน้าเดียว
+- [USER_MANUAL.md](docs/USER_MANUAL.md) — คู่มือนิสิต
+- [ADMIN_MANUAL.md](docs/ADMIN_MANUAL.md) — คู่มือผู้ดูแล
+- [PDPA.md](docs/PDPA.md) — นโยบายข้อมูลส่วนบุคคล
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md) — โครงสร้างระบบ
+- [DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) — สคริปต์สาธิต 5 นาที
+- [SEO.md](docs/SEO.md) — คู่มือ SEO และ Google Scholar
+- [DEPLOY.md](docs/DEPLOY.md) — คู่มือติดตั้งบน Vercel + Neon
+- [SCOPE.md](docs/SCOPE.md) — ขอบเขตโครงการ
+- [AUTH_SETUP.md](docs/AUTH_SETUP.md) — การตั้งค่า Auth.js

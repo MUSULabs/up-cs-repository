@@ -22,7 +22,9 @@ enum AccessLevel {
 
 enum PaperStatus {
   DRAFT
+  PENDING
   PUBLISHED
+  REJECTED
   ARCHIVED
 }
 
@@ -57,6 +59,11 @@ model Paper {
   viewCount      Int         @default(0)
   downloadCount  Int         @default(0)
   researchAreaId String
+  submittedById  String?
+  submittedAt    DateTime?
+  reviewedById   String?
+  reviewedAt     DateTime?
+  rejectionReason String? @db.Text
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
@@ -66,6 +73,9 @@ model Paper {
   keywords     PaperKeyword[]
   technologies PaperTech[]
   downloads    DownloadLog[]
+  bookmarks    Bookmark[]
+  submittedBy  User? @relation("PaperSubmitter", fields: [submittedById], references: [id], onDelete: SetNull)
+  reviewedBy   User? @relation("PaperReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   @@index([academicYear])
   @@index([status])
@@ -181,6 +191,10 @@ model User {
   accounts  Account[]
   sessions  Session[]
   downloads DownloadLog[]
+  bookmarks Bookmark[]
+  savedSearches SavedSearch[]
+  submittedPapers Paper[] @relation("PaperSubmitter")
+  reviewedPapers Paper[] @relation("PaperReviewer")
 }
 
 model Account {
@@ -231,4 +245,29 @@ model DownloadLog {
   user  User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([paperId])
+}
+
+model Bookmark {
+  userId    String
+  paperId   String
+  note      String?  @db.Text
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paper Paper @relation(fields: [paperId], references: [id], onDelete: Cascade)
+
+  @@id([userId, paperId])
+  @@index([paperId])
+}
+
+model SavedSearch {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  queryString String
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }

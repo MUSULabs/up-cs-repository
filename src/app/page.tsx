@@ -7,6 +7,26 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { getHomeStats, getLatestPapers } from "@/server/papers";
 import { getResearchAreas, getTopTechnologies } from "@/server/taxonomy";
+import { prisma } from "@/lib/prisma";
+import { absoluteUrl } from "@/lib/site";
+
+export async function generateMetadata() {
+  const publicPapers = await prisma.paper.findMany({
+    where: { status: "PUBLISHED", accessLevel: "PUBLIC" },
+    orderBy: { createdAt: "desc" },
+    take: 8,
+    select: { slug: true, titleTh: true },
+  });
+  return {
+    alternates: { canonical: absoluteUrl("/") },
+    openGraph: { url: absoluteUrl("/") },
+    other: {
+      "application-name": "UP-CS Research Repository",
+      "DC.title": "คลังภาคนิพนธ์ วิทยาการคอมพิวเตอร์ มหาวิทยาลัยพะเยา",
+    },
+    ...(publicPapers.length ? { keywords: publicPapers.map((paper) => paper.titleTh) } : {}),
+  };
+}
 
 export default async function Home() {
   const [stats, areas, latest, technologies] = await Promise.all([
@@ -16,9 +36,33 @@ export default async function Home() {
     getTopTechnologies(15),
   ]);
   const maxTechnologyCount = technologies[0]?._count.papers ?? 1;
+  const publicPapers = await prisma.paper.findMany({
+    where: { status: "PUBLISHED", accessLevel: "PUBLIC" },
+    orderBy: { createdAt: "desc" },
+    take: 8,
+    select: { slug: true, titleTh: true },
+  });
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: "คลังภาคนิพนธ์ วิทยาการคอมพิวเตอร์ มหาวิทยาลัยพะเยา",
+    description: "คลังภาคนิพนธ์และโครงงานของนิสิตวิทยาการคอมพิวเตอร์ มหาวิทยาลัยพะเยา",
+    url: absoluteUrl("/"),
+    mainEntity: {
+      "@type": "ItemList",
+      numberOfItems: publicPapers.length,
+      itemListElement: publicPapers.map((paper, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        name: paper.titleTh,
+        url: absoluteUrl(`/papers/${paper.slug}`),
+      })),
+    },
+  };
 
   return (
     <main className="flex-1">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
       <section className="border-b bg-gradient-to-b from-primary/10 via-background to-background">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
           <div className="max-w-3xl">
@@ -36,6 +80,10 @@ export default async function Home() {
               </div>
               <Button type="submit" size="lg">ค้นหา</Button>
             </form>
+            <div className="mt-4 flex flex-wrap gap-4 text-sm font-medium">
+              <Link href="/check-topic" className="text-primary hover:underline">มีหัวข้ออยู่แล้ว? ตรวจสอบหัวข้อซ้ำก่อนเริ่มทำ</Link>
+              <Link href="/stats" className="text-primary hover:underline">ดูภาพรวมภาคนิพนธ์ของสาขา</Link>
+            </div>
           </div>
         </div>
       </section>
