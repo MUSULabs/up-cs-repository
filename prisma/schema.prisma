@@ -1,0 +1,234 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  VIEWER
+  DEPT_MEMBER
+  ADMIN
+}
+
+enum AccessLevel {
+  PUBLIC
+  AUTHENTICATED
+  DEPT_ONLY
+}
+
+enum PaperStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum AdvisorRole {
+  MAIN
+  CO
+}
+
+enum TechnologyCategory {
+  LANGUAGE
+  FRAMEWORK
+  DATABASE
+  TOOL
+  OTHER
+}
+
+model Paper {
+  id             String       @id @default(cuid())
+  slug           String       @unique
+  titleTh        String
+  titleEn        String?
+  abstractTh     String       @db.Text
+  abstractEn     String?      @db.Text
+  academicYear   Int
+  semester       Int?
+  pdfUrl         String?
+  pdfPageCount   Int?
+  pdfSizeBytes   Int?
+  coverImageUrl  String?
+  accessLevel    AccessLevel  @default(PUBLIC)
+  status         PaperStatus  @default(PUBLISHED)
+  viewCount      Int          @default(0)
+  downloadCount  Int          @default(0)
+  researchAreaId String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  researchArea ResearchArea   @relation(fields: [researchAreaId], references: [id])
+  authors      PaperAuthor[]
+  advisors     PaperAdvisor[]
+  keywords     PaperKeyword[]
+  technologies PaperTech[]
+  downloads    DownloadLog[]
+
+  @@index([academicYear])
+  @@index([status])
+  @@index([accessLevel])
+}
+
+model Author {
+  id          String        @id @default(cuid())
+  firstNameTh String
+  lastNameTh  String
+  firstNameEn String?
+  lastNameEn  String?
+  studentId   String?
+  email       String?
+
+  papers PaperAuthor[]
+}
+
+model Advisor {
+  id          String         @id @default(cuid())
+  titleName   String
+  firstNameTh String
+  lastNameTh  String
+  firstNameEn String?
+  lastNameEn  String?
+  email       String?
+  isActive    Boolean        @default(true)
+
+  papers PaperAdvisor[]
+}
+
+model ResearchArea {
+  id          String  @id @default(cuid())
+  nameTh      String
+  nameEn      String
+  slug        String  @unique
+  description String?
+  icon        String?
+
+  papers Paper[]
+}
+
+model Keyword {
+  id      String         @id @default(cuid())
+  nameTh  String
+  nameEn  String?
+  slug    String         @unique
+
+  papers PaperKeyword[]
+}
+
+model Technology {
+  id       String             @id @default(cuid())
+  name     String
+  slug     String             @unique
+  category TechnologyCategory
+
+  papers PaperTech[]
+}
+
+model PaperAuthor {
+  paperId     String
+  authorId    String
+  authorOrder Int
+
+  paper  Paper  @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  author Author @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@id([paperId, authorId])
+}
+
+model PaperAdvisor {
+  paperId   String
+  advisorId String
+  role      AdvisorRole
+
+  paper   Paper   @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  advisor Advisor @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+
+  @@id([paperId, advisorId])
+}
+
+model PaperKeyword {
+  paperId   String
+  keywordId String
+
+  paper   Paper   @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  keyword Keyword @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+
+  @@id([paperId, keywordId])
+}
+
+model PaperTech {
+  paperId      String
+  technologyId String
+
+  paper      Paper      @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  technology Technology @relation(fields: [technologyId], references: [id], onDelete: Cascade)
+
+  @@id([paperId, technologyId])
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  passwordHash  String?
+  image         String?
+  role          Role      @default(VIEWER)
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+
+  accounts Account[]
+  sessions Session[]
+  downloads DownloadLog[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+model DownloadLog {
+  id        String   @id @default(cuid())
+  paperId   String
+  userId    String?
+  ipHash    String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  paper Paper @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  user  User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([paperId])
+}
